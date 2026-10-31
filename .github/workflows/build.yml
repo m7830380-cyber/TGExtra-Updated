@@ -1,0 +1,78 @@
+name: Build and Release Tweak
+
+permissions:
+  contents: write
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - scheme: rootful
+            scheme_arg: ""
+          - scheme: rootless
+            scheme_arg: "THEOS_PACKAGE_SCHEME=rootless"
+          - scheme: roothide
+            scheme_arg: "THEOS_PACKAGE_SCHEME=roothide"
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Refresh TL schema from latest Swiftgram + tdesktop
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/Swiftgram/Telegram-iOS/master/submodules/TelegramApi/swift_scheme.tl -o /tmp/sg.tl && cp /tmp/sg.tl schema/swiftgram.tl || echo "keeping bundled swiftgram schema"
+          curl -fsSL https://raw.githubusercontent.com/telegramdesktop/tdesktop/dev/Telegram/SourceFiles/mtproto/scheme/api.tl -o /tmp/td.tl && cp /tmp/td.tl schema/tdesktop.tl || echo "keeping bundled tdesktop schema"
+          python3 scripts/gen_schema.py Sources/tgapi/TLSchema.h schema/swiftgram.tl schema/tdesktop.tl
+
+      - name: Walker self-test
+        run: |
+          cat > /tmp/t.c <<'EOF'
+          #include "TLWalker.h"
+          #include <stdio.h>
+          #include <string.h>
+          int main(){ uint8_t b[64]; size_t o=0; uint32_t v;
+          #define P(x) v=(x); memcpy(b+o,&v,4); o+=4;
+           P(0x78d4dec1) P(0xa20db0e5) P(0x1cb5c415) P(2) P(55) P(66) P(9) P(2) P(12345)
+           TLWalkStats s={0}; int r=TLWalkPatch(b,o,TLW_ANTI_DELETE,&s);
+           printf("ok=%d deleted=%u layer=%s\n",r,s.deletedCount,TLWalkSchemaLayer()); return !(r==1&&s.deletedCount==2); }
+          EOF
+          clang -ISources/tgapi /tmp/t.c Sources/tgapi/TLWalker.c -o /tmp/t && /tmp/t
+
+      - name: Set up Theos
+        uses: waruhachi/theos-action@v2.4.6
+        with:
+          theos-src: 'waruhachi/theos'
+          theos-branch: 'main'
+          sdks-src: 'waruhachi/sdks'
+          sdks-branch: 'main'
+
+      - name: Build Package
+        run: make clean package FINALPACKAGE=1 STRIP=0 ${{ matrix.scheme_arg }}
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.scheme }}-package
+          path: packages/*.deb
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: packages
+          merge-multiple: true
+      - name: Publish release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release delete release --repo ${{ github.repository }} --yes --cleanup-tag || true
+          gh release create release packages/*.deb --repo ${{ github.repository }} \
+            --title "TGExtra (auto build ${GITHUB_SHA::7})" \
+            --notes "Built against the latest Swiftgram/tdesktop TL schema at build time."
