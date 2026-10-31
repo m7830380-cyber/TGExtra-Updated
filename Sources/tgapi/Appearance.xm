@@ -35,10 +35,30 @@ static UIFont *custom(CGFloat size, UIFontWeight weight, BOOL italic) {
 
 %group Fonts
 %hook UIFont
-+ (UIFont *)systemFontOfSize:(CGFloat)size { return custom(size, UIFontWeightRegular, NO) ?: %orig(size * fontScale()); }
-+ (UIFont *)systemFontOfSize:(CGFloat)size weight:(UIFontWeight)w { return custom(size, w, NO) ?: %orig(size * fontScale(), w); }
-+ (UIFont *)boldSystemFontOfSize:(CGFloat)size { return custom(size, UIFontWeightBold, NO) ?: %orig(size * fontScale()); }
-+ (UIFont *)italicSystemFontOfSize:(CGFloat)size { return custom(size, UIFontWeightRegular, YES) ?: %orig(size * fontScale()); }
++ (UIFont *)systemFontOfSize:(CGFloat)size {
+	UIFont *f = custom(size, UIFontWeightRegular, NO);
+	if (f) return f;
+	CGFloat scaled = size * fontScale();
+	return %orig(scaled);
+}
++ (UIFont *)systemFontOfSize:(CGFloat)size weight:(UIFontWeight)w {
+	UIFont *f = custom(size, w, NO);
+	if (f) return f;
+	CGFloat scaled = size * fontScale();
+	return %orig(scaled, w);
+}
++ (UIFont *)boldSystemFontOfSize:(CGFloat)size {
+	UIFont *f = custom(size, UIFontWeightBold, NO);
+	if (f) return f;
+	CGFloat scaled = size * fontScale();
+	return %orig(scaled);
+}
++ (UIFont *)italicSystemFontOfSize:(CGFloat)size {
+	UIFont *f = custom(size, UIFontWeightRegular, YES);
+	if (f) return f;
+	CGFloat scaled = size * fontScale();
+	return %orig(scaled);
+}
 %end
 %end
 

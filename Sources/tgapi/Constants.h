@@ -65,3 +65,13 @@
 #define kCustomFont @"TGExtraFontName"
 #define kFontScale @"TGExtraFontScale"
 #define kStreamerMode @"TGExtraStreamerMode"
+
+#ifdef __cplusplus
+extern "C" {
+#endif
+NSArray *TGXEditHistory(void);
+NSArray *TGXDeletedLog(void);
+void TGXClearLogs(void);
+#ifdef __cplusplus
+}
+#endif
