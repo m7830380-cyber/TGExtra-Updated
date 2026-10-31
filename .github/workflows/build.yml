@@ -58,10 +58,18 @@ jobs:
           cd /tmp/choma
           brew list openssl@3 >/dev/null 2>&1 || brew install openssl@3
           export PKG_CONFIG_PATH="$(brew --prefix openssl@3)/lib/pkgconfig"
-          export CFLAGS="-I$(brew --prefix openssl@3)/include" LDFLAGS="-L$(brew --prefix openssl@3)/lib"
-          make -j4 || make
-          B=$(find /tmp/choma/output -type f -name ct_bypass | head -1)
-          echo "ct_bypass at $B"; sudo cp "$B" /usr/local/bin/ct_bypass
+          # ChOma's standalone Makefile link to libchoma.{a,dylib} breaks with custom
+          # openssl flags; instead compile ct_bypass directly from sources (same approach
+          # as TrollStore's fastPathSign Makefile) so crypto symbols resolve via pkg-config.
+          clang -O2 -Iinclude \
+            $(pkg-config --cflags libcrypto) \
+            tests/ct_bypass/main.c src/*.c \
+            $(pkg-config --libs libcrypto) \
+            -framework CoreFoundation -framework Foundation -framework Security \
+            -o /tmp/ct_bypass
+          sudo cp /tmp/ct_bypass /usr/local/bin/ct_bypass
+          ct_bypass -h 2>/dev/null | head -1 || true
+          echo "ct_bypass built"
 
       - name: Stage embedded Python 3.13
         run: |
