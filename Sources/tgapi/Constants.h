@@ -77,3 +77,17 @@ void TGXImportFont(UIViewController *from, void (^done)(NSString *family));
 #ifdef __cplusplus
 }
 #endif
+
+// Embedded Python (PyBridge.m)
+#ifdef __cplusplus
+extern "C" {
+#endif
+NSString *TGXPyStatus(void);
+BOOL TGXPyReady(void);
+NSString *TGXPyOutputPath(void);
+void TGXPyStart(void (^done)(NSString *status));
+void TGXPyRun(NSString *code, void (^done)(BOOL ok, NSString *output));
+extern NSString *const TGXPySelfTest;
+#ifdef __cplusplus
+}
+#endif

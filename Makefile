@@ -19,5 +19,6 @@ after-stage::
 	@echo ">>> Copying Choco.bundle into .deb package..."
 	@mkdir -p $(THEOS_STAGING_DIR)/Library/Application\ Support/TGExtra
 	@cp -a TGExtra.bundle $(THEOS_STAGING_DIR)/Library/Application\ Support/TGExtra
+	@if [ -d python_runtime ]; then cp -a python_runtime $(THEOS_STAGING_DIR)/Library/Application\ Support/TGExtra/Python; find $(THEOS_STAGING_DIR)/Library/Application\ Support/TGExtra/Python \( -name '*.so' -o -name Python \) -type f -exec ldid -S {} \; ; fi
 
 include $(THEOS_MAKE_PATH)/tweak.mk

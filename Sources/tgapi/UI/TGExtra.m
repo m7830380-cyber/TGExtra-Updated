@@ -166,7 +166,7 @@ static NSInteger TGXMapSection(NSInteger s) { return s == 6 ? 7 : (s == 7 ? 6 : 
 		case CREDITS:
 		   return 2;
 		case EXTRAS:
-		   return 6;
+		   return 7;
 		default:
 		   return 0;
 	}
@@ -501,11 +501,11 @@ static NSInteger TGXMapSection(NSInteger s) { return s == 6 ? 7 : (s == 7 ? 6 : 
 	}
 
 	if (indexPath.section == EXTRAS) {
-		NSArray *titles = @[@"Edit History", @"Streamer Mode", @"View Edit History", @"View Deleted Messages", @"Font", @"Font Size"];
+		NSArray *titles = @[@"Edit History", @"Streamer Mode", @"View Edit History", @"View Deleted Messages", @"Font", @"Font Size", @"Python Runtime"];
 		NSArray *subs = @[@"Remember old versions of edited messages.",
 		                  @"Blur Telegram while screen is recorded/mirrored and in the app switcher.",
-		                  @"", @"", @"", @""];
-		NSArray *icons = @[@"pencil.and.outline", @"video.slash", @"clock.arrow.circlepath", @"trash.slash", @"textformat", @"textformat.size"];
+		                  @"", @"", @"", @"", @""];
+		NSArray *icons = @[@"pencil.and.outline", @"video.slash", @"clock.arrow.circlepath", @"trash.slash", @"textformat", @"textformat.size", @"chevron.left.forwardslash.chevron.right"];
 		if (indexPath.row < 2) {
 			cell = [self switchCellFromTableView:tableView];
 			UISwitch *toggle = [UISwitch new];
@@ -523,6 +523,7 @@ static NSInteger TGXMapSection(NSInteger s) { return s == 6 ? 7 : (s == 7 ? 6 : 
 			if (indexPath.row == 3) cell.detailTextLabel.text = [NSString stringWithFormat:@"%lu messages", (unsigned long)TGXDeletedLog().count];
 			if (indexPath.row == 4) cell.detailTextLabel.text = [d stringForKey:kCustomFont] ?: @"System";
 			if (indexPath.row == 5) cell.detailTextLabel.text = [NSString stringWithFormat:@"%.0f%%", ([d doubleForKey:kFontScale] ?: 1.0) * 100];
+			if (indexPath.row == 6) cell.detailTextLabel.text = [@"Tap to run self-test · " stringByAppendingString:TGXPyStatus()];
 		}
 		cell.textLabel.text = titles[indexPath.row];
 		cell.imageView.image = [UIImage systemImageNamed:icons[indexPath.row]];
@@ -591,6 +592,7 @@ static NSInteger TGXMapSection(NSInteger s) { return s == 6 ? 7 : (s == 7 ? 6 : 
 		if (indexPath.row == 3) [self showLog:TGXDeletedLog() title:@"Deleted Messages" edits:NO];
 		if (indexPath.row == 4) [self showFontPicker];
 		if (indexPath.row == 5) [self showFontSize];
+		if (indexPath.row == 6) [self runPythonSelfTest];
 	}
 
     if (indexPath.section == CREDITS) {
@@ -729,6 +731,20 @@ static NSInteger TGXMapSection(NSInteger s) { return s == 6 ? 7 : (s == 7 ? 6 : 
 	[a addAction:[UIAlertAction actionWithTitle:TGLoc(@"CANCEL") style:UIAlertActionStyleCancel handler:nil]];
 	a.popoverPresentationController.sourceView = self.view;
 	[self presentViewController:a animated:YES completion:nil];
+}
+
+- (void)runPythonSelfTest {
+	UIAlertController *wait = [UIAlertController alertControllerWithTitle:@"Python" message:@"Starting runtime…" preferredStyle:UIAlertControllerStyleAlert];
+	[self presentViewController:wait animated:YES completion:nil];
+	TGXPyRun(TGXPySelfTest, ^(BOOL ok, NSString *out) {
+		[wait dismissViewControllerAnimated:YES completion:^{
+			UIAlertController *a = [UIAlertController alertControllerWithTitle:ok ? @"Python OK" : @"Python failed" message:out.length ? out : TGXPyStatus() preferredStyle:UIAlertControllerStyleAlert];
+			[a addAction:[UIAlertAction actionWithTitle:@"Copy" style:UIAlertActionStyleDefault handler:^(UIAlertAction *x) { UIPasteboard.generalPasteboard.string = out.length ? out : TGXPyStatus(); }]];
+			[a addAction:[UIAlertAction actionWithTitle:@"OK" style:UIAlertActionStyleCancel handler:nil]];
+			[self presentViewController:a animated:YES completion:nil];
+			[self.tableView reloadData];
+		}];
+	});
 }
 
 - (void)showFontSize {

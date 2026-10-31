@@ -52,6 +52,9 @@ jobs:
           sdks-src: 'waruhachi/sdks'
           sdks-branch: 'main'
 
+      - name: Stage embedded Python 3.13
+        run: bash tools/stage_python.sh python_runtime
+
       - name: Build Package
         run: make clean package FINALPACKAGE=1 STRIP=0 ${{ matrix.scheme_arg }}
 

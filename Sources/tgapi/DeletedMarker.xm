@@ -235,7 +235,7 @@ void TGXMarkDeleted(int64_t channelId, int32_t messageId) {
 	dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
 		gItemViewClass = objc_getClass("ChatMessageItemView.ChatMessageItemView");
 		if (!gItemViewClass) gItemViewClass = NSClassFromString(@"_TtC19ChatMessageItemView19ChatMessageItemView");
-		TGXLog(@"TGExtra 1.5.3 itemClass=%@", gItemViewClass);
+		TGXLog(@"TGExtra 1.6.0 itemClass=%@", gItemViewClass);
 		if (!gItemViewClass) return;
 		Ivar iv = class_getInstanceVariable(gItemViewClass, "item");
 		if (iv) gItemOffset = ivar_getOffset(iv);
