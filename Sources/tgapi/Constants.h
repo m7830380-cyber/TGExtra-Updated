@@ -61,3 +61,7 @@
 #define kAntiDeleteLog @"TGExtraAntiDeleteLog"
 #define kLocalPremium @"TGExtraLocalPremium"
 #define kDisableReadContents @"TGExtraDisableReadContents"
+#define kEditHistory @"TGExtraEditHistory"
+#define kCustomFont @"TGExtraFontName"
+#define kFontScale @"TGExtraFontScale"
+#define kStreamerMode @"TGExtraStreamerMode"

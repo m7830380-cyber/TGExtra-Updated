@@ -8,6 +8,7 @@ static uint32_t TGXWalkOptions(void) {
 	if ([d boolForKey:kDisableForwardRestriction]) opts |= TLW_NOFORWARDS;
 	if ([d boolForKey:kAntiDelete]) opts |= TLW_ANTI_DELETE;
 	if ([d boolForKey:kLocalPremium]) opts |= TLW_LOCAL_PREMIUM;
+	if ([d boolForKey:kAntiDelete] || [d boolForKey:kEditHistory]) opts |= TLW_CAPTURE_TEXT;
 	return opts;
 }
 
@@ -17,9 +18,11 @@ static void TGXRecordDeleted(const TLWalkStats *stats) {
 	NSMutableArray *log = [[d arrayForKey:kAntiDeleteLog] mutableCopy] ?: [NSMutableArray array];
 	NSNumber *now = @((long long)[[NSDate date] timeIntervalSince1970]);
 	for (uint32_t i = 0; i < stats->deletedCount; i++) {
-		[log addObject:@{@"id": @(stats->deletedIds[i]), @"date": now}];
+		[log addObject:@{@"id": @(stats->deletedIds[i]), @"ch": @(stats->deletedChannel[i]), @"date": now}];
+		TGXMarkDeleted(stats->deletedChannel[i], stats->deletedIds[i]);
+		TGXStoreDeleted(TGXMessageKey(stats->deletedChannel[i], stats->deletedIds[i]));
 	}
-	while (log.count > 500) [log removeObjectAtIndex:0];
+	while (log.count > 5000) [log removeObjectAtIndex:0];
 	[d setObject:log forKey:kAntiDeleteLog];
 }
 
@@ -56,12 +59,18 @@ static TGXParser TGXWrapParser(TGXParser original) {
 %property (nonatomic, strong) NSNumber *functionID;
 
 - (void)setPayload:(NSData *)payload metadata:(id)metadata shortMetadata:(id)shortMetadata responseParser:(id (^)(NSData *))responseParser {
+	if (payload.length >= 4) {
+		int32_t fid0 = 0; [payload getBytes:&fid0 length:4];
+		if (fid0 == TLFN_account_updateStatus) {
+			NSData *rewritten = TGXRewriteOnlineStatus(payload);
+			if (rewritten) payload = rewritten;
+		}
+	}
 	int32_t functionID = 0;
 	if (payload.length >= 4) [payload getBytes:&functionID length:4];
 	self.functionID = @(functionID);
 
 	switch (functionID) {
-		case TLFN_account_updateStatus:          handleOnlineStatus(self, payload); break;
 		case TLFN_messages_setTyping:            handleSetTyping(self, payload); break;
 		case TLFN_messages_readHistory:          handleMessageReadReceipt(self, payload); break;
 		case TLFN_channels_readHistory:          handleChannelsReadReceipt(self, payload); break;

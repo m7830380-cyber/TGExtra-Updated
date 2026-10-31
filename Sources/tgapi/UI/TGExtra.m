@@ -17,7 +17,7 @@
 	[self setupTableView];
 	[self setupIconAsHeader];
 	[self setupApplyButton];
-	self.title = @"TGExtra";
+	self.title = @"TGExtra by dev.magician";
 
 	[[NSNotificationCenter defaultCenter] addObserver:self
                                              selector:@selector(didChangeLanguage)
@@ -60,7 +60,7 @@
 
     // Logo Image
 	//NSString *imagePath = [[NSBundle mainBundle].bundlePath stringByAppendingPathComponent:@"Choco.png"];
-	NSData *imageData = [[NSData alloc] initWithBase64EncodedString:CHOCOPNG options:NSDataBase64DecodingIgnoreUnknownCharacters];
+	NSData *imageData = [[NSData alloc] initWithBase64EncodedString:DEVLOGOPNG options:NSDataBase64DecodingIgnoreUnknownCharacters];
     UIImageView *iconView = [[UIImageView alloc] initWithImage:[UIImage imageWithData:imageData]];
     iconView.translatesAutoresizingMaskIntoConstraints = NO;
     iconView.layer.cornerRadius = 100 / 4;
@@ -139,13 +139,17 @@ typedef NS_ENUM(NSInteger, TABLE_VIEW_SECTIONS) {
     FAKE_LOCATION = 4,
     LANGUAGE = 5,
 	CREDITS = 6,
+	EXTRAS = 7,
 };
 
 - (NSInteger)numberOfSectionsInTableView:(UITableView *)tableView {
-    return 7;
+    return 8;
 }
 
+static NSInteger TGXMapSection(NSInteger s) { return s == 6 ? 7 : (s == 7 ? 6 : s); }
+
 - (NSInteger)tableView:(UITableView *)tableView numberOfRowsInSection:(NSInteger)section {
+	section = TGXMapSection(section);
 	switch (section) {
 		case GHOST_MODE:
 		   return 17;
@@ -161,6 +165,8 @@ typedef NS_ENUM(NSInteger, TABLE_VIEW_SECTIONS) {
 		   return 1;
 		case CREDITS:
 		   return 2;
+		case EXTRAS:
+		   return 6;
 		default:
 		   return 0;
 	}
@@ -168,6 +174,7 @@ typedef NS_ENUM(NSInteger, TABLE_VIEW_SECTIONS) {
 }
 
 - (NSString *)tableView:(UITableView *)tableView titleForHeaderInSection:(NSInteger)section {
+	section = TGXMapSection(section);
 
 	switch (section) {
 		case GHOST_MODE:
@@ -184,6 +191,8 @@ typedef NS_ENUM(NSInteger, TABLE_VIEW_SECTIONS) {
 		   return TGLoc(@"LANGUAGE_SECTION_HEADER");
 		case CREDITS:
 		   return TGLoc(@"CREDITS_SECTION_HEADER");
+		case EXTRAS:
+		   return @"Extras";
 		default:
 		   return nil;
 	}
@@ -209,6 +218,8 @@ typedef NS_ENUM(NSInteger, TABLE_VIEW_SECTIONS) {
 }
 
 - (UITableViewCell *)tableView:(UITableView *)tableView cellForRowAtIndexPath:(NSIndexPath *)indexPath {
+	NSIndexPath *visibleIndexPath = indexPath;
+	indexPath = [NSIndexPath indexPathForRow:indexPath.row inSection:TGXMapSection(indexPath.section)];
 	UITableViewCell *cell;
 
 	if (indexPath.section == 0) { // GHOST MOODE
@@ -414,7 +425,7 @@ typedef NS_ENUM(NSInteger, TABLE_VIEW_SECTIONS) {
 				}
 
 		        dispatch_async(dispatch_get_main_queue(), ^{
-					UITableViewCell *currentCell = [tableView cellForRowAtIndexPath:indexPath];
+					UITableViewCell *currentCell = [tableView cellForRowAtIndexPath:visibleIndexPath];
 					if (currentCell == cell) {
 						UILabel *sizeLabel = [[UILabel alloc] init];
 						sizeLabel.text = self.cacheSize;
@@ -489,14 +500,46 @@ typedef NS_ENUM(NSInteger, TABLE_VIEW_SECTIONS) {
 		}
 	}
 
+	if (indexPath.section == EXTRAS) {
+		NSArray *titles = @[@"Edit History", @"Streamer Mode", @"View Edit History", @"View Deleted Messages", @"Font", @"Font Size"];
+		NSArray *subs = @[@"Remember old versions of edited messages.",
+		                  @"Blur Telegram while screen is recorded/mirrored and in the app switcher.",
+		                  @"", @"", @"", @""];
+		NSArray *icons = @[@"pencil.and.outline", @"video.slash", @"clock.arrow.circlepath", @"trash.slash", @"textformat", @"textformat.size"];
+		if (indexPath.row < 2) {
+			cell = [self switchCellFromTableView:tableView];
+			UISwitch *toggle = [UISwitch new];
+			toggle.on = [[NSUserDefaults standardUserDefaults] boolForKey:[self switchKeyForIndexPath:indexPath]];
+			[toggle addTarget:self action:@selector(switchChanged:) forControlEvents:UIControlEventValueChanged];
+			toggle.tag = 1000 + (indexPath.section * 1000) + indexPath.row;
+			cell.accessoryView = toggle;
+			cell.detailTextLabel.text = subs[indexPath.row];
+		} else {
+			cell = [self normalCellFromTableView:tableView];
+			cell.accessoryView = nil;
+			cell.accessoryType = UITableViewCellAccessoryDisclosureIndicator;
+			NSUserDefaults *d = [NSUserDefaults standardUserDefaults];
+			if (indexPath.row == 2) cell.detailTextLabel.text = [NSString stringWithFormat:@"%lu edits", (unsigned long)TGXEditHistory().count];
+			if (indexPath.row == 3) cell.detailTextLabel.text = [NSString stringWithFormat:@"%lu messages", (unsigned long)TGXDeletedLog().count];
+			if (indexPath.row == 4) cell.detailTextLabel.text = [d stringForKey:kCustomFont] ?: @"System";
+			if (indexPath.row == 5) cell.detailTextLabel.text = [NSString stringWithFormat:@"%.0f%%", ([d doubleForKey:kFontScale] ?: 1.0) * 100];
+		}
+		cell.textLabel.text = titles[indexPath.row];
+		cell.imageView.image = [UIImage systemImageNamed:icons[indexPath.row]];
+		cell.imageView.tintColor = [UIColor systemPinkColor];
+		cell.textLabel.numberOfLines = 0;
+		cell.detailTextLabel.numberOfLines = 0;
+		return cell;
+	}
+
 	if (indexPath.section == 6) { // Credits
 		cell = [self normalCellFromTableView:tableView];
 
 		if (indexPath.row == 0) {
-			cell.textLabel.text = @"Chocolate Fluffy (Dumb Whore)";
+			cell.textLabel.text = @"dev.magician";
 			cell.detailTextLabel.text = @"Developer";
 			cell.detailTextLabel.textColor = [UIColor lightGrayColor];
-			NSData *imageData = [[NSData alloc] initWithBase64EncodedString:CHOCOPNG options:NSDataBase64DecodingIgnoreUnknownCharacters];
+			NSData *imageData = [[NSData alloc] initWithBase64EncodedString:DEVLOGOPNG options:NSDataBase64DecodingIgnoreUnknownCharacters];
 			cell.imageView.image = [UIImage imageWithData:imageData scale:2.0];
 			cell.imageView.layer.cornerRadius = 40/8;
 			cell.imageView.layer.masksToBounds = YES;
@@ -505,7 +548,7 @@ typedef NS_ENUM(NSInteger, TABLE_VIEW_SECTIONS) {
 		}
 		else if (indexPath.row == 1) {
 			cell.textLabel.text = TGLoc(@"DISCLAIMER");
-			cell.detailTextLabel.text = @"A note from whore";
+			cell.detailTextLabel.text = @"A note from the developer";
 			cell.imageView.image = [UIImage systemImageNamed:@"note.text"];
 			cell.imageView.tintColor = [self dynamicColorBW];
 			cell.accessoryView = nil;
@@ -523,6 +566,7 @@ typedef NS_ENUM(NSInteger, TABLE_VIEW_SECTIONS) {
 
 - (void)tableView:(UITableView *)tableView didSelectRowAtIndexPath:(NSIndexPath *)indexPath {
     [tableView deselectRowAtIndexPath:indexPath animated:YES];
+	indexPath = [NSIndexPath indexPathForRow:indexPath.row inSection:TGXMapSection(indexPath.section)];
 
 	if (indexPath.section == FILE_FIXER) { // File Picker Fix
 		if (indexPath.row == 1) {
@@ -542,9 +586,16 @@ typedef NS_ENUM(NSInteger, TABLE_VIEW_SECTIONS) {
 		}
 	}
 
+	if (indexPath.section == EXTRAS) {
+		if (indexPath.row == 2) [self showLog:TGXEditHistory() title:@"Edit History" edits:YES];
+		if (indexPath.row == 3) [self showLog:TGXDeletedLog() title:@"Deleted Messages" edits:NO];
+		if (indexPath.row == 4) [self showFontPicker];
+		if (indexPath.row == 5) [self showFontSize];
+	}
+
     if (indexPath.section == CREDITS) {
 		if (indexPath.row == 0) {
-			NSString *base64String = @"aHR0cHM6Ly90Lm1lL3VsdGltYXRlUG9pc29u";
+			NSString *base64String = @"aHR0cHM6Ly9naXRodWIuY29tL203ODMwMzgwLWN5YmVyL1RHRXh0cmEtVXBkYXRlZA==";
 	        NSData *decodedData = [[NSData alloc] initWithBase64EncodedString:base64String options:0];
 	        NSString *decodedURL = [[NSString alloc] initWithData:decodedData encoding:NSUTF8StringEncoding];
 
@@ -620,9 +671,70 @@ typedef NS_ENUM(NSInteger, TABLE_VIEW_SECTIONS) {
                 case 0: return FAKE_LOCATION_ENABLED_KEY;
                 default: return nil;
             }
+        case 7:
+            switch (indexPath.row) {
+                case 0: return kEditHistory;
+                case 1: return kStreamerMode;
+                default: return nil;
+            }
         default:
             return nil;
     }
+}
+
+- (void)showLog:(NSArray *)entries title:(NSString *)title edits:(BOOL)edits {
+	NSDateFormatter *f = [NSDateFormatter new];
+	f.dateStyle = NSDateFormatterShortStyle; f.timeStyle = NSDateFormatterShortStyle;
+	NSMutableString *text = [NSMutableString string];
+	for (NSDictionary *e in entries.reverseObjectEnumerator) {
+		NSString *when = [f stringFromDate:[NSDate dateWithTimeIntervalSince1970:[e[@"date"] doubleValue]]];
+		NSString *where = [e[@"key"] hasPrefix:@"c"] ? @"channel/group" : @"private/group";
+		if (edits) [text appendFormat:@"[%@] %@ #%@\nBEFORE: %@\nAFTER:  %@\n\n", when, where, [e[@"key"] componentsSeparatedByString:@"_"].lastObject, e[@"old"], e[@"new"]];
+		else [text appendFormat:@"[%@] %@ #%@\n%@\n\n", when, where, [e[@"key"] componentsSeparatedByString:@"_"].lastObject, e[@"text"]];
+	}
+	UIViewController *vc = [UIViewController new];
+	vc.title = title;
+	UITextView *tv = [UITextView new];
+	tv.editable = NO;
+	tv.font = [UIFont monospacedSystemFontOfSize:13 weight:UIFontWeightRegular];
+	tv.text = text.length ? text : @"Nothing yet.";
+	vc.view = tv;
+	vc.navigationItem.rightBarButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemTrash target:self action:@selector(clearLogs)];
+	[self.navigationController pushViewController:vc animated:YES];
+}
+
+- (void)clearLogs {
+	TGXClearLogs();
+	[self.navigationController popViewControllerAnimated:YES];
+	[self.tableView reloadData];
+}
+
+- (void)showFontPicker {
+	UIAlertController *a = [UIAlertController alertControllerWithTitle:@"Font" message:@"Restart Telegram to apply" preferredStyle:UIAlertControllerStyleActionSheet];
+	NSArray *fams = @[@"System", @"Avenir Next", @"Helvetica Neue", @"Georgia", @"Menlo", @"Futura", @"Gill Sans", @"Optima", @"Chalkboard SE", @"Rockwell", @"American Typewriter", @"Courier New", @"Noteworthy", @"Marker Felt", @"Didot", @"Baskerville"];
+	for (NSString *fam in fams) {
+		[a addAction:[UIAlertAction actionWithTitle:fam style:UIAlertActionStyleDefault handler:^(UIAlertAction *x) {
+			if ([fam isEqualToString:@"System"]) [[NSUserDefaults standardUserDefaults] removeObjectForKey:kCustomFont];
+			else [[NSUserDefaults standardUserDefaults] setObject:fam forKey:kCustomFont];
+			[self.tableView reloadData];
+		}]];
+	}
+	[a addAction:[UIAlertAction actionWithTitle:TGLoc(@"CANCEL") style:UIAlertActionStyleCancel handler:nil]];
+	a.popoverPresentationController.sourceView = self.view;
+	[self presentViewController:a animated:YES completion:nil];
+}
+
+- (void)showFontSize {
+	UIAlertController *a = [UIAlertController alertControllerWithTitle:@"Font Size" message:@"Restart Telegram to apply" preferredStyle:UIAlertControllerStyleActionSheet];
+	for (NSNumber *n in @[@0.85, @0.9, @1.0, @1.1, @1.2, @1.3]) {
+		[a addAction:[UIAlertAction actionWithTitle:[NSString stringWithFormat:@"%.0f%%", n.doubleValue * 100] style:UIAlertActionStyleDefault handler:^(UIAlertAction *x) {
+			[[NSUserDefaults standardUserDefaults] setDouble:n.doubleValue forKey:kFontScale];
+			[self.tableView reloadData];
+		}]];
+	}
+	[a addAction:[UIAlertAction actionWithTitle:TGLoc(@"CANCEL") style:UIAlertActionStyleCancel handler:nil]];
+	a.popoverPresentationController.sourceView = self.view;
+	[self presentViewController:a animated:YES completion:nil];
 }
 
 - (NSString *)sizeOfUglyFileFixDirectory {

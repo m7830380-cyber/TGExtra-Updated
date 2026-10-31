@@ -1,8 +1,8 @@
 Package: com.choco.tg
 Name: TGExtra
-Version: 1.3.0
+Version: 1.4.0
 Architecture: iphoneos-arm
-Description: A simple Tweak For Telegram iOS
-Maintainer: waruhachi
-Author: choco
+Description: AyuGram-style Telegram tweak: ghost mode, anti-delete, edit history, fonts, streamer mode
+Maintainer: dev.magician
+Author: dev.magician
 Section: Tweaks

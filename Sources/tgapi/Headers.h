@@ -23,7 +23,13 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
-void handleOnlineStatus(MTRequest *request, NSData *payload);
+NSData *TGXRewriteOnlineStatus(NSData *payload);
+void TGXMarkDeleted(int64_t channelId, int32_t messageId);
+NSString *TGXMessageKey(int64_t channelId, int32_t messageId);
+void TGXStoreDeleted(NSString *key);
+NSArray *TGXEditHistory(void);
+NSArray *TGXDeletedLog(void);
+void TGXClearLogs(void);
 void handleSetTyping(MTRequest *request, NSData *payload);
 void handleMessageReadReceipt(MTRequest *request, NSData *payload);
 void handleStoriesReadReceipt(MTRequest *request, NSData *payload);

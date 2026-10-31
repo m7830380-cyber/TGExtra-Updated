@@ -24,6 +24,37 @@ typedef struct {
     TLWalkStats *stats;
 } Walker;
 
+static TLWMessageCallback gMsgCb;
+void TLWSetMessageCallback(TLWMessageCallback cb) { gMsgCb = cb; }
+
+static int readStringAt(const uint8_t *p, size_t len, size_t off, const char **str, size_t *slen) {
+    if (off >= len) return 0;
+    size_t n = p[off], start = off + 1;
+    if (n >= 254) {
+        if (off + 4 > len) return 0;
+        n = (size_t)p[off + 1] | ((size_t)p[off + 2] << 8) | ((size_t)p[off + 3] << 16);
+        start = off + 4;
+    }
+    if (start + n > len) return 0;
+    *str = (const char *)(p + start); *slen = n;
+    return 1;
+}
+
+static void captureMessage(Walker *w, const size_t *fo, const uint32_t *fv, const TLCtor *c) {
+    const TLField *fs = &kTLFields[c->fieldStart];
+    #define PRESENT(i) (fs[i].flagField == 255 || (fv[fs[i].flagField] & (1u << fs[i].bit)))
+    int32_t mid, date, edit = 0; uint32_t peerCtor; int64_t peerId;
+    memcpy(&mid, w->p + fo[TLF_message_id], 4);
+    memcpy(&date, w->p + fo[TLF_message_date], 4);
+    if (PRESENT(TLF_message_edit_date)) memcpy(&edit, w->p + fo[TLF_message_edit_date], 4);
+    memcpy(&peerCtor, w->p + fo[TLF_message_peer_id], 4);
+    memcpy(&peerId, w->p + fo[TLF_message_peer_id] + 4, 8);
+    const char *txt; size_t tl;
+    if (!readStringAt(w->p, w->len, fo[TLF_message_message], &txt, &tl)) return;
+    gMsgCb(peerCtor == TLC_peerChannel ? peerId : 0, mid, date, edit, txt, tl);
+    #undef PRESENT
+}
+
 static const TLCtor *findCtor(uint32_t id) {
     size_t lo = 0, hi = TL_CTOR_COUNT;
     while (lo < hi) {
@@ -157,8 +188,11 @@ static int walkBoxed(Walker *w, int depth) {
             if ((size_t)count * 4 > w->len - w->off) return 0;
             for (uint32_t k = 0; k < count; k++) {
                 int32_t mid; memcpy(&mid, w->p + w->off + k * 4, 4);
-                if (w->stats && mid != 0) {
-                    if (w->stats->deletedCount < TLW_MAX_DELETED) w->stats->deletedIds[w->stats->deletedCount++] = mid;
+                if (w->stats && mid != 0 && w->stats->deletedCount < TLW_MAX_DELETED) {
+                    int64_t ch = 0;
+                    if (id == TLC_updateDeleteChannelMessages) memcpy(&ch, w->p + fieldOffsets[0], 8);
+                    w->stats->deletedChannel[w->stats->deletedCount] = ch;
+                    w->stats->deletedIds[w->stats->deletedCount++] = mid;
                 }
                 memset(w->p + w->off + k * 4, 0, 4);
             }
@@ -167,6 +201,10 @@ static int walkBoxed(Walker *w, int depth) {
         }
 
         if (!walkValue(w, f->kind, f->elem, depth)) return 0;
+    }
+
+    if ((w->opts & TLW_CAPTURE_TEXT) && gMsgCb && id == TLC_message && n > TLF_message_edit_date) {
+        captureMessage(w, fieldOffsets, flagValues, c);
     }
 
     // Constructor fully parsed: apply flag patches (layout-neutral, 'true' flags carry no data).

@@ -14,6 +14,14 @@
 #define TLC_messages_affectedMessages 0x84d19185u
 #define TLC_messages_sponsoredMessagesEmpty 0x1839490fu
 #define TLC_contacts_sponsoredPeersEmpty 0xea32b4b1u
+#define TLF_message_id 17
+#define TLF_message_peer_id 21
+#define TLF_message_message 29
+#define TLF_message_edit_date 36
+#define TLF_message_date 28
+#define TLC_peerUser 0x59511722u
+#define TLC_peerChat 0x36c6019au
+#define TLC_peerChannel 0xa2a5371eu
 #define TLF_updateDeleteMessages_messages 0
 #define TLF_updateDeleteChannelMessages_messages 1
 #define TLFN_account_updateStatus ((int32_t)0x6628562cu)

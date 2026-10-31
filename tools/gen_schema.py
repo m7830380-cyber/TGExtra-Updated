@@ -62,6 +62,10 @@ for c in ['message', 'channel', 'chat', 'storyItem', 'updateDeleteMessages', 'up
           'user', 'boolTrue', 'vector', 'messages.affectedMessages', 'messages.sponsoredMessagesEmpty',
           'contacts.sponsoredPeersEmpty']:
     out.append('#define TLC_%s 0x%08xu' % (c.replace('.', '_'), byname[c][0]))
+for f in ['id', 'peer_id', 'message', 'edit_date', 'date']:
+    out.append('#define TLF_message_%s %d' % (f, [x[4] for x in byname['message'][1]].index(f)))
+for c in ['peerUser', 'peerChat', 'peerChannel']:
+    out.append('#define TLC_%s 0x%08xu' % (c, byname[c][0]))
 for n in ['updateDeleteMessages', 'updateDeleteChannelMessages']:
     out.append('#define TLF_%s_messages %d' % (n, [f[4] for f in byname[n][1]].index('messages')))
 for f in ['account.updateStatus', 'messages.setTyping', 'messages.readHistory', 'channels.readHistory',

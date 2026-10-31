@@ -12,18 +12,19 @@ NSData *boolFalse() {
 }
 
 // Handlers
-void handleOnlineStatus(MTRequest *request, NSData *payload) {
-	
-	NSData *isOfflineData = [payload subdataWithRange:NSMakeRange(payload.length - 4, 4)];
-	uint32_t isOffline = 0;
-	[isOfflineData getBytes:&isOffline length:4];
-	
-	if (isOffline == 3162085175) { // Online (BOOL false)
-		if ([[NSUserDefaults standardUserDefaults] boolForKey:kDisableOnlineStatus]) {
-			request.fakeData = boolTrue();
-		}
-	}
-	
+// Rewrites account.updateStatus(offline:false) into offline:true. Dropping the request (old
+// approach) did not work: the server still marks you online from other activity, so we
+// actively keep telling it we are offline every time the client pings presence.
+NSData *TGXRewriteOnlineStatus(NSData *payload) {
+	if (![[NSUserDefaults standardUserDefaults] boolForKey:kDisableOnlineStatus]) return nil;
+	if (payload.length < 8) return nil;
+	uint32_t last = 0;
+	[payload getBytes:&last range:NSMakeRange(payload.length - 4, 4)];
+	if (last != 0xbc799737u) return nil; // boolFalse => going online
+	NSMutableData *m = [payload mutableCopy];
+	uint32_t t = 0x997275b5u; // boolTrue
+	[m replaceBytesInRange:NSMakeRange(m.length - 4, 4) withBytes:&t];
+	return m;
 }
 
 void read_Input_Peer(NSData *data, int *offset) {
