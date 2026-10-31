@@ -72,8 +72,8 @@ static NSString *keyForNode(id node) {
 @property (nonatomic, readonly) BOOL isNodeLoaded;
 @end
 
-void TGXShowEditHistory(NSArray *versions);
-NSArray *TGXVersionsForKey(NSString *key);
+extern "C" void TGXShowEditHistory(NSArray *versions);
+extern "C" NSArray *TGXVersionsForKey(NSString *key);
 
 static const void *kTGXKeyKey = &kTGXKeyKey;
 
