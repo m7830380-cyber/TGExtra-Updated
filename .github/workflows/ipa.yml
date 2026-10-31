@@ -3,9 +3,6 @@ name: Build and Release IPA
 permissions:
   contents: write
 
-permissions:
-  contents: write
-
 on:
   workflow_dispatch:
     inputs:
