@@ -82,9 +82,13 @@ jobs:
           bash tools/stage_python.sh python_runtime
           # Telegram App Store TeamID: dyld rejects non-platform libs with a different TeamID
           TEAM=C67CF9S4VU
-          fail=0
+          command -v ldid || export PATH="$THEOS/bin:$PATH"
+          ldid 2>&1 | head -1 || true
           find python_runtime \( -name '*.so' -o -path '*Python.framework/Python' \) -type f | while read f; do
             echo "=== $f ==="
+            # ct_bypass needs an existing signature to rewrite; BeeWare binaries are
+            # unsigned, so ad-hoc fake-sign with ldid first, then set the TeamID.
+            ldid -S "$f"
             if ! ct_bypass -i "$f" -r -t "$TEAM"; then
               echo "WARN: ct_bypass returned non-zero for $f (continuing)"
             fi
