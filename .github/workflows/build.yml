@@ -54,8 +54,11 @@ jobs:
 
       - name: Build ct_bypass (ChOma, CoreTrust bypass w/ custom TeamID)
         run: |
-          git clone -q --depth 1 https://github.com/opa334/ChOma /tmp/choma
+          git clone -q https://github.com/opa334/ChOma /tmp/choma
           cd /tmp/choma
+          # Pin to the commit TrollStore itself vendors — ChOma HEAD split
+          # csd_code_directory_update() and broke tests/ct_bypass/main.c.
+          git checkout -q 964023ddac2286ef8e843f90df64d44ac6a673df
           brew list openssl@3 >/dev/null 2>&1 || brew install openssl@3
           export PKG_CONFIG_PATH="$(brew --prefix openssl@3)/lib/pkgconfig"
           # ChOma's standalone Makefile link to libchoma.{a,dylib} breaks with custom
