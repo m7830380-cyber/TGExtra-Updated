@@ -19,6 +19,6 @@ after-stage::
 	@echo ">>> Copying Choco.bundle into .deb package..."
 	@mkdir -p $(THEOS_STAGING_DIR)/Library/Application\ Support/TGExtra
 	@cp -a TGExtra.bundle $(THEOS_STAGING_DIR)/Library/Application\ Support/TGExtra
-	@if [ -d python_runtime ]; then cp -a python_runtime $(THEOS_STAGING_DIR)/Library/Application\ Support/TGExtra/TGXPython.bundle; printf '<?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict><key>CFBundleIdentifier</key><string>dev.magician.tgxpython</string><key>CFBundlePackageType</key><string>BNDL</string></dict></plist>' > "$(THEOS_STAGING_DIR)/Library/Application Support/TGExtra/TGXPython.bundle/Info.plist"; find $(THEOS_STAGING_DIR)/Library/Application\ Support/TGExtra/TGXPython.bundle \( -name '*.so' -o -name Python \) -type f -exec ldid -S {} \; ; fi
+	@if [ -d python_runtime ]; then cp -a python_runtime $(THEOS_STAGING_DIR)/Library/Application\ Support/TGExtra/TGXPython.bundle; printf '<?xml version="1.0" encoding="UTF-8"?><plist version="1.0"><dict><key>CFBundleIdentifier</key><string>dev.magician.tgxpython</string><key>CFBundlePackageType</key><string>BNDL</string></dict></plist>' > "$(THEOS_STAGING_DIR)/Library/Application Support/TGExtra/TGXPython.bundle/Info.plist"; fi
 
 include $(THEOS_MAKE_PATH)/tweak.mk

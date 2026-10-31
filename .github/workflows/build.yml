@@ -52,8 +52,23 @@ jobs:
           sdks-src: 'waruhachi/sdks'
           sdks-branch: 'main'
 
+      - name: Build fastPathSign (CoreTrust bypass signer)
+        run: |
+          git clone -q https://github.com/opa334/TrollStore /tmp/ts
+          cd /tmp/ts && git submodule update --init --depth 1 ChOma
+          cd Exploits/fastPathSign
+          brew list openssl@3 >/dev/null 2>&1 || brew install openssl@3
+          export PKG_CONFIG_PATH="$(brew --prefix openssl@3)/lib/pkgconfig"
+          make
+          cp fastPathSign /usr/local/bin/ 2>/dev/null || sudo cp fastPathSign /usr/local/bin/
+
       - name: Stage embedded Python 3.13
-        run: bash tools/stage_python.sh python_runtime
+        run: |
+          bash tools/stage_python.sh python_runtime
+          find python_runtime \( -name '*.so' -o -path '*Python.framework/Python' \) -type f | while read f; do
+            fastPathSign "$f" >/dev/null || { echo "sign failed $f"; exit 1; }
+          done
+          echo "fastPathSigned $(find python_runtime -name '*.so' | wc -l) extensions + Python"
 
       - name: Build Package
         run: make clean package FINALPACKAGE=1 STRIP=0 ${{ matrix.scheme_arg }}
