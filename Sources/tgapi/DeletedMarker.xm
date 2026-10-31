@@ -155,6 +155,46 @@ static void applyFade(ASDisplayNode *node) {
 	}
 }
 
+static void TGXLog(NSString *fmt, ...) {
+	static NSFileHandle *fh;
+	static int lines;
+	if (lines++ > 400) return;
+	if (!fh) {
+		NSString *dir = [NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES).firstObject stringByAppendingPathComponent:@"TGExtra"];
+		[[NSFileManager defaultManager] createDirectoryAtPath:dir withIntermediateDirectories:YES attributes:nil error:nil];
+		NSString *p = [dir stringByAppendingPathComponent:@"debug.log"];
+		[@"" writeToFile:p atomically:NO encoding:NSUTF8StringEncoding error:nil];
+		fh = [NSFileHandle fileHandleForWritingAtPath:p];
+	}
+	va_list ap; va_start(ap, fmt);
+	NSString *line = [[NSString alloc] initWithFormat:fmt arguments:ap];
+	va_end(ap);
+	[fh writeData:[[line stringByAppendingString:@"\n"] dataUsingEncoding:NSUTF8StringEncoding]];
+}
+
+static void scanView(UIView *v, int depth) {
+	if (depth > 40) return;
+	id node = [v respondsToSelector:@selector(asyncdisplaykit_node)] ? [v performSelector:@selector(asyncdisplaykit_node)] : nil;
+	if (node && gItemViewClass && [node isKindOfClass:gItemViewClass]) {
+		static int logged;
+		if (logged < 15) {
+			logged++;
+			void *raw = gItemOffset >= 0 ? *(void **)((uint8_t *)(__bridge void *)node + gItemOffset) : NULL;
+			NSString *d = raw ? [(__bridge id)raw description] : @"(nil item)";
+			TGXLog(@"node %@ key=%@ desc=%@", NSStringFromClass([node class]), keyForNode(node), d.length > 120 ? [d substringToIndex:120] : d);
+		}
+		[gLiveNodes addObject:node];
+		applyFade((ASDisplayNode *)node);
+		return;
+	}
+	for (UIView *sub in v.subviews) scanView(sub, depth + 1);
+}
+
+static void scanAll(void) {
+	if (UIApplication.sharedApplication.applicationState != UIApplicationStateActive) return;
+	for (UIWindow *w in UIApplication.sharedApplication.windows) scanView(w, 0);
+}
+
 void TGXMarkDeleted(int64_t channelId, int32_t messageId) {
 	NSString *key = TGXMessageKey(channelId, messageId);
 	@synchronized (gDeleted) { [gDeleted addObject:key]; }
@@ -182,9 +222,13 @@ void TGXMarkDeleted(int64_t channelId, int32_t messageId) {
 	gIdRegex = [NSRegularExpression regularExpressionWithPattern:@"id: (\\d+):(-?\\d+):(\\d+)_(-?\\d+)" options:0 error:nil];
 	dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
 		gItemViewClass = objc_getClass("ChatMessageItemView.ChatMessageItemView");
+		if (!gItemViewClass) gItemViewClass = NSClassFromString(@"_TtC19ChatMessageItemView19ChatMessageItemView");
+		TGXLog(@"TGExtra 1.5.1 itemClass=%@", gItemViewClass);
 		if (!gItemViewClass) return;
 		Ivar iv = class_getInstanceVariable(gItemViewClass, "item");
 		if (iv) gItemOffset = ivar_getOffset(iv);
+		TGXLog(@"item ivar=%p offset=%td deletedKeys=%lu", iv, gItemOffset, (unsigned long)gDeleted.count);
+		[NSTimer scheduledTimerWithTimeInterval:0.5 repeats:YES block:^(NSTimer *t) { scanAll(); }];
 		if (gItemOffset >= 0) {
 			%init(TGXDeleted);
 		}
