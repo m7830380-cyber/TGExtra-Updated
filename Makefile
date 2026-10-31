@@ -5,7 +5,7 @@ include $(THEOS)/makefiles/common.mk
 
 # Regenerate TL schema table: make schema SCHEMAS="path/a.tl path/b.tl"
 schema::
-	python3 scripts/gen_schema.py Sources/tgapi/TLSchema.h $(SCHEMAS)
+	python3 tools/gen_schema.py Sources/tgapi/TLSchema.h $(SCHEMAS)
 
 TWEAK_NAME = TGExtra
 

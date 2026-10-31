@@ -28,7 +28,7 @@ jobs:
         run: |
           curl -fsSL https://raw.githubusercontent.com/Swiftgram/Telegram-iOS/master/submodules/TelegramApi/swift_scheme.tl -o /tmp/sg.tl && cp /tmp/sg.tl schema/swiftgram.tl || echo "keeping bundled swiftgram schema"
           curl -fsSL https://raw.githubusercontent.com/telegramdesktop/tdesktop/dev/Telegram/SourceFiles/mtproto/scheme/api.tl -o /tmp/td.tl && cp /tmp/td.tl schema/tdesktop.tl || echo "keeping bundled tdesktop schema"
-          python3 scripts/gen_schema.py Sources/tgapi/TLSchema.h schema/swiftgram.tl schema/tdesktop.tl
+          python3 tools/gen_schema.py Sources/tgapi/TLSchema.h schema/swiftgram.tl schema/tdesktop.tl
 
       - name: Walker self-test
         run: |
