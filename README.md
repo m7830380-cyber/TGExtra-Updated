@@ -8,6 +8,12 @@ To Open Tweak menu : Longpress screen with 3 finger (if no flex injected) of 4 f
 ![Screenshot 1](Screenshots/1.png)
 ![Screenshot 2](Screenshots/2.png)
 
+## 1.3.0 (updated fork)
+- Removed the bundled Telegram Swift `Api` copy (stuck at an old layer, broke on every update). Replaced with a small schema-driven C walker (`Sources/tgapi/TLWalker.c`) whose table is regenerated **on every CI build** from the latest Swiftgram + tdesktop TL schema (`tools/gen_schema.py`).
+- Protected-content bypass works again on current clients (message/chat/channel/story `noforwards` cleared in API responses *and* push updates).
+- NEW: Keep deleted messages (anti-delete, new deletions only), no "listened" marks for voice/round messages, story view-increment blocked, sponsored peers in search hidden, Local Premium (client-side only).
+- Fixed: "Disable All Ads" used the same key as "Disable Online Status".
+
 ## Features
 
 - Disable Ads
