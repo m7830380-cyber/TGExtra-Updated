@@ -142,7 +142,11 @@ void handleSetTyping(MTRequest *request, NSData *payload) {
 	}
 	
 	if (shouldBlockAction) {
-		request.fakeDatastatic NSData *affectedMessages(void) {
+		request.fakeData = boolTrue();
+	}
+}
+
+static NSData *affectedMessages(void) {
 	uint8_t bytes[12] = {0x85, 0x91, 0xD1, 0x84, 0,0,0,0, 0,0,0,0}; // messages.affectedMessages pts=0 pts_count=0
 	return [NSData dataWithBytes:bytes length:sizeof(bytes)];
 }
