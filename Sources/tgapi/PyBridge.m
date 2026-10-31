@@ -19,7 +19,28 @@ static NSString *gStatus = @"not started";
 static BOOL gReady = NO;
 static dispatch_queue_t gQ;
 
-NSString *TGXPyHome(void) { return jbroot(@"/Library/Application Support/TGExtra/Python"); }
+static NSMutableArray *gTried;
+NSString *TGXPyHome(void) {
+	gTried = [NSMutableArray array];
+	NSMutableArray *c = [NSMutableArray array];
+	Dl_info info; if (dladdr((void *)&TGXPyHome, &info) && info.dli_fname) {
+		NSString *me = [@(info.dli_fname) stringByDeletingLastPathComponent];
+		[c addObject:[me stringByAppendingPathComponent:@"TGXPython.bundle"]];
+		[c addObject:[[me stringByDeletingLastPathComponent] stringByAppendingPathComponent:@"TGXPython.bundle"]];
+	}
+	NSString *b = NSBundle.mainBundle.bundlePath;
+	[c addObject:[b stringByAppendingPathComponent:@"TGXPython.bundle"]];
+	[c addObject:[b stringByAppendingPathComponent:@"Frameworks/TGXPython.bundle"]];
+	[c addObject:[b stringByAppendingPathComponent:@"PlugIns/TGXPython.bundle"]];
+	[c addObject:jbroot(@"/Library/Application Support/TGExtra/TGXPython.bundle")];
+	[c addObject:@"/var/jb/Library/Application Support/TGExtra/TGXPython.bundle"];
+	NSFileManager *fm = NSFileManager.defaultManager;
+	for (NSString *p in c) { [gTried addObject:p]; if ([fm fileExistsAtPath:[p stringByAppendingPathComponent:@"Python.framework/Python"]]) return p; }
+	// last resort: scan the app bundle
+	NSDirectoryEnumerator *e = [fm enumeratorAtPath:b];
+	for (NSString *rel in e) { if ([rel.lastPathComponent isEqualToString:@"TGXPython.bundle"]) return [b stringByAppendingPathComponent:rel]; if (e.level > 3) [e skipDescendants]; }
+	return c.firstObject;
+}
 static NSString *TGXPyDataDir(void) {
 	NSString *d = [NSSearchPathForDirectoriesInDomains(NSApplicationSupportDirectory, NSUserDomainMask, YES).firstObject stringByAppendingPathComponent:@"TGExtra"];
 	[[NSFileManager defaultManager] createDirectoryAtPath:d withIntermediateDirectories:YES attributes:nil error:nil];
@@ -33,7 +54,7 @@ static void startLocked(void) {
 	if (gReady) return;
 	NSString *home = TGXPyHome();
 	NSString *lib = [home stringByAppendingPathComponent:@"Python.framework/Python"];
-	if (![[NSFileManager defaultManager] fileExistsAtPath:lib]) { gStatus = [@"runtime missing: " stringByAppendingString:lib]; return; }
+	if (![[NSFileManager defaultManager] fileExistsAtPath:lib]) { gStatus = [@"runtime not found. tried:\n" stringByAppendingString:[gTried componentsJoinedByString:@"\n"]]; return; }
 	void *h = dlopen(lib.fileSystemRepresentation, RTLD_NOW | RTLD_GLOBAL);
 	if (!h) { gStatus = [NSString stringWithFormat:@"dlopen failed: %s", dlerror()]; return; }
 	fn_InitEx init = (fn_InitEx)dlsym(h, "Py_InitializeEx");
