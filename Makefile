@@ -11,7 +11,7 @@ TWEAK_NAME = TGExtra
 
 $(TWEAK_NAME)_FILES = $(shell find Sources \( -name '*.c' -o -name '*.m' -o -name '*.xm' \))
 $(TWEAK_NAME)_CFLAGS = -fobjc-arc -ISources/tgapi -Wno-deprecated-declarations
-$(TWEAK_NAME)_FRAMEWORKS = CoreServices
+$(TWEAK_NAME)_FRAMEWORKS = CoreServices UIKit CoreText UniformTypeIdentifiers
 $(TWEAK_NAME)_LOGOS_DEFAULT_GENERATOR = internal
 
 # Copy TGExtra.bundle manually during the packaging step

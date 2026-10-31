@@ -76,3 +76,16 @@ __attribute__((constructor)) static void TGXStoreInit(void) {
 	gDeletedLog = [d[@"deleted"] mutableCopy] ?: [NSMutableArray array];
 	TLWSetMessageCallback(onMessage);
 }
+
+// All versions of one message, oldest first: @[@{text,date}...]; empty if never edited.
+NSArray *TGXVersionsForKey(NSString *key) {
+	__block NSMutableArray *r = [NSMutableArray array];
+	dispatch_sync(gQ, ^{
+		for (NSDictionary *e in gEdits) {
+			if (![e[@"key"] isEqualToString:key]) continue;
+			if (r.count == 0) [r addObject:@{@"text": e[@"old"], @"date": gTexts[key] ? gTexts[key][1] : e[@"date"]}];
+			[r addObject:@{@"text": e[@"new"], @"date": e[@"date"]}];
+		}
+	});
+	return r;
+}

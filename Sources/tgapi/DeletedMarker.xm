@@ -67,16 +67,91 @@ static NSString *keyForNode(id node) {
 	return TGXMessageKey(ns == 2 ? peer : 0, mid);
 }
 
-static void applyFade(ASDisplayNode *node) {
-	if (![[NSUserDefaults standardUserDefaults] boolForKey:kAntiDelete]) return;
-	BOOL deleted = TGXIsDeletedKey(keyForNode(node));
-	BOOL faded = [objc_getAssociatedObject(node, kTGXFadedKey) boolValue];
+@interface ASDisplayNode (TGX)
+@property (nonatomic, readonly) UIView *view;
+@property (nonatomic, readonly) BOOL isNodeLoaded;
+@end
+
+void TGXShowEditHistory(NSArray *versions);
+NSArray *TGXVersionsForKey(NSString *key);
+
+static const void *kTGXKeyKey = &kTGXKeyKey;
+
+static UIView *bubbleView(UIView *row) {
+	UIView *best = nil; CGFloat area = 0;
+	for (UIView *v in row.subviews) {
+		if (v.hidden || v.tag >= 7770) continue;
+		CGFloat a = v.bounds.size.width * v.bounds.size.height;
+		if (a > area && v.bounds.size.width < row.bounds.size.width - 8) { area = a; best = v; }
+	}
+	return best;
+}
+
+@interface TGXHistoryButton : UIButton
+@end
+@implementation TGXHistoryButton
+- (void)tgxOpen {
+	NSString *key = objc_getAssociatedObject(self, kTGXKeyKey);
+	NSArray *v = TGXVersionsForKey(key);
+	if (v.count) TGXShowEditHistory(v);
+}
+@end
+
+static void placeBadges(ASDisplayNode *node, NSString *key, BOOL deleted) {
+	if (!node.isNodeLoaded) return;
+	UIView *row = node.view;
+	UIView *bubble = bubbleView(row);
+	CGRect b = bubble ? bubble.frame : row.bounds;
+
+	UIImageView *bin = (UIImageView *)[row viewWithTag:7771];
 	if (deleted) {
-		if (node.alpha > kDeletedAlpha + 0.01) node.alpha = kDeletedAlpha;
-		if (!faded) objc_setAssociatedObject(node, kTGXFadedKey, @YES, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
-	} else if (faded) {
-		node.alpha = 1.0;
-		objc_setAssociatedObject(node, kTGXFadedKey, nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+		if (!bin) {
+			bin = [[UIImageView alloc] initWithImage:[UIImage systemImageNamed:@"trash.fill" withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:11 weight:UIImageSymbolWeightSemibold]]];
+			bin.tintColor = [UIColor systemRedColor];
+			bin.tag = 7771;
+			bin.userInteractionEnabled = NO;
+			[row addSubview:bin];
+		}
+		bin.frame = CGRectMake(CGRectGetMaxX(b) - 34, CGRectGetMaxY(b) - 18, 14, 14);
+		bin.hidden = NO;
+	} else if (bin) {
+		bin.hidden = YES;
+	}
+
+	TGXHistoryButton *hist = (TGXHistoryButton *)[row viewWithTag:7772];
+	BOOL edited = key && [[NSUserDefaults standardUserDefaults] boolForKey:kEditHistory] && TGXVersionsForKey(key).count > 1;
+	if (edited) {
+		if (!hist) {
+			hist = [TGXHistoryButton buttonWithType:UIButtonTypeSystem];
+			[hist setImage:[UIImage systemImageNamed:@"clock.arrow.circlepath" withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:12 weight:UIImageSymbolWeightSemibold]] forState:UIControlStateNormal];
+			hist.tintColor = [UIColor systemPinkColor];
+			hist.tag = 7772;
+			[hist addTarget:hist action:@selector(tgxOpen) forControlEvents:UIControlEventTouchUpInside];
+			[row addSubview:hist];
+		}
+		objc_setAssociatedObject(hist, kTGXKeyKey, key, OBJC_ASSOCIATION_COPY_NONATOMIC);
+		BOOL rightSide = CGRectGetMidX(b) > row.bounds.size.width / 2;
+		hist.frame = rightSide ? CGRectMake(CGRectGetMinX(b) - 30, CGRectGetMaxY(b) - 26, 26, 26)
+		                       : CGRectMake(CGRectGetMaxX(b) + 4, CGRectGetMaxY(b) - 26, 26, 26);
+		hist.hidden = NO;
+	} else if (hist) {
+		hist.hidden = YES;
+	}
+}
+
+static void applyFade(ASDisplayNode *node) {
+	NSString *badgeKey = keyForNode(node);
+	placeBadges(node, badgeKey, [[NSUserDefaults standardUserDefaults] boolForKey:kAntiDelete] && TGXIsDeletedKey(badgeKey));
+	if (![[NSUserDefaults standardUserDefaults] boolForKey:kAntiDelete]) return;
+	BOOL deleted = TGXIsDeletedKey(badgeKey);
+	BOOL faded = [objc_getAssociatedObject(node, kTGXFadedKey) boolValue];
+	if (!node.isNodeLoaded) return;
+	if (deleted || faded) {
+		for (UIView *v in node.view.subviews) {
+			if (v.tag >= 7770 && v.tag < 7780) continue;
+			v.alpha = deleted ? kDeletedAlpha : 1.0;
+		}
+		objc_setAssociatedObject(node, kTGXFadedKey, deleted ? @YES : nil, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
 	}
 }
 

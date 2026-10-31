@@ -72,6 +72,8 @@ extern "C" {
 NSArray *TGXEditHistory(void);
 NSArray *TGXDeletedLog(void);
 void TGXClearLogs(void);
+NSArray *TGXImportedFontFamilies(void);
+void TGXImportFont(UIViewController *from, void (^done)(NSString *family));
 #ifdef __cplusplus
 }
 #endif

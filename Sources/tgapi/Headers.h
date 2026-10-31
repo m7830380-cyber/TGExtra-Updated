@@ -30,6 +30,8 @@ void TGXStoreDeleted(NSString *key);
 NSArray *TGXEditHistory(void);
 NSArray *TGXDeletedLog(void);
 void TGXClearLogs(void);
+NSArray *TGXVersionsForKey(NSString *key);
+BOOL TGXIsDeletedKey(NSString *key);
 void handleSetTyping(MTRequest *request, NSData *payload);
 void handleMessageReadReceipt(MTRequest *request, NSData *payload);
 void handleStoriesReadReceipt(MTRequest *request, NSData *payload);

@@ -712,6 +712,13 @@ static NSInteger TGXMapSection(NSInteger s) { return s == 6 ? 7 : (s == 7 ? 6 : 
 - (void)showFontPicker {
 	UIAlertController *a = [UIAlertController alertControllerWithTitle:@"Font" message:@"Restart Telegram to apply" preferredStyle:UIAlertControllerStyleActionSheet];
 	NSArray *fams = @[@"System", @"Avenir Next", @"Helvetica Neue", @"Georgia", @"Menlo", @"Futura", @"Gill Sans", @"Optima", @"Chalkboard SE", @"Rockwell", @"American Typewriter", @"Courier New", @"Noteworthy", @"Marker Felt", @"Didot", @"Baskerville"];
+	[a addAction:[UIAlertAction actionWithTitle:@"＋ Import Font (.ttf / .otf)…" style:UIAlertActionStyleDefault handler:^(UIAlertAction *x) {
+		TGXImportFont(self, ^(NSString *family) {
+			if (family) [[NSUserDefaults standardUserDefaults] setObject:family forKey:kCustomFont];
+			[self.tableView reloadData];
+		});
+	}]];
+	fams = [TGXImportedFontFamilies() arrayByAddingObjectsFromArray:fams];
 	for (NSString *fam in fams) {
 		[a addAction:[UIAlertAction actionWithTitle:fam style:UIAlertActionStyleDefault handler:^(UIAlertAction *x) {
 			if ([fam isEqualToString:@"System"]) [[NSUserDefaults standardUserDefaults] removeObjectForKey:kCustomFont];
