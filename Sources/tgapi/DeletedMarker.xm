@@ -106,13 +106,12 @@ static void placeBadges(ASDisplayNode *node, NSString *key, BOOL deleted) {
 	UIImageView *bin = (UIImageView *)[row viewWithTag:7771];
 	if (deleted) {
 		if (!bin) {
-			bin = [[UIImageView alloc] initWithImage:[UIImage systemImageNamed:@"trash.fill" withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:11 weight:UIImageSymbolWeightSemibold]]];
+			bin = [[UIImageView alloc] initWithImage:[UIImage systemImageNamed:@"trash.fill" withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:14 weight:UIImageSymbolWeightSemibold]]];
 			bin.tintColor = [UIColor systemRedColor];
 			bin.tag = 7771;
 			bin.userInteractionEnabled = NO;
 			[row addSubview:bin];
 		}
-		bin.frame = CGRectMake(CGRectGetMaxX(b) - 34, CGRectGetMaxY(b) - 18, 14, 14);
 		bin.hidden = NO;
 	} else if (bin) {
 		bin.hidden = YES;
@@ -123,19 +122,32 @@ static void placeBadges(ASDisplayNode *node, NSString *key, BOOL deleted) {
 	if (edited) {
 		if (!hist) {
 			hist = [TGXHistoryButton buttonWithType:UIButtonTypeSystem];
-			[hist setImage:[UIImage systemImageNamed:@"clock.arrow.circlepath" withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:12 weight:UIImageSymbolWeightSemibold]] forState:UIControlStateNormal];
+			[hist setImage:[UIImage systemImageNamed:@"clock.arrow.circlepath" withConfiguration:[UIImageSymbolConfiguration configurationWithPointSize:15 weight:UIImageSymbolWeightSemibold]] forState:UIControlStateNormal];
 			hist.tintColor = [UIColor systemPinkColor];
 			hist.tag = 7772;
 			[hist addTarget:hist action:@selector(tgxOpen) forControlEvents:UIControlEventTouchUpInside];
 			[row addSubview:hist];
 		}
 		objc_setAssociatedObject(hist, kTGXKeyKey, key, OBJC_ASSOCIATION_COPY_NONATOMIC);
-		BOOL rightSide = CGRectGetMidX(b) > row.bounds.size.width / 2;
-		hist.frame = rightSide ? CGRectMake(CGRectGetMinX(b) - 30, CGRectGetMaxY(b) - 26, 26, 26)
-		                       : CGRectMake(CGRectGetMaxX(b) + 4, CGRectGetMaxY(b) - 26, 26, 26);
 		hist.hidden = NO;
 	} else if (hist) {
 		hist.hidden = YES;
+	}
+
+	// Lay out outside the bubble, next to the timestamp row, on the side away from the tail.
+	BOOL outgoing = CGRectGetMidX(b) > row.bounds.size.width / 2;
+	CGFloat size = 22, gap = 4;
+	CGFloat y = CGRectGetMaxY(b) - size - 4;
+	CGFloat x = outgoing ? CGRectGetMinX(b) - gap - size : CGRectGetMaxX(b) + gap;
+	NSArray *icons = outgoing ? @[hist ?: [NSNull null], bin ?: [NSNull null]] : @[bin ?: [NSNull null], hist ?: [NSNull null]];
+	for (id o in icons) {
+		if (o == [NSNull null] || [o isHidden]) continue;
+		UIView *v = o;
+		v.frame = CGRectMake(x, y, size, size);
+		v.alpha = 1.0;
+		v.contentMode = UIViewContentModeCenter;
+		[row bringSubviewToFront:v];
+		x += outgoing ? -(size + gap) : (size + gap);
 	}
 }
 
@@ -223,7 +235,7 @@ void TGXMarkDeleted(int64_t channelId, int32_t messageId) {
 	dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
 		gItemViewClass = objc_getClass("ChatMessageItemView.ChatMessageItemView");
 		if (!gItemViewClass) gItemViewClass = NSClassFromString(@"_TtC19ChatMessageItemView19ChatMessageItemView");
-		TGXLog(@"TGExtra 1.5.2 itemClass=%@", gItemViewClass);
+		TGXLog(@"TGExtra 1.5.3 itemClass=%@", gItemViewClass);
 		if (!gItemViewClass) return;
 		Ivar iv = class_getInstanceVariable(gItemViewClass, "item");
 		if (iv) gItemOffset = ivar_getOffset(iv);
