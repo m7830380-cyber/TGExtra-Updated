@@ -35,6 +35,22 @@ NSData *TGXPatchIncoming(NSData *input) {
 	return copy;
 }
 
+static NSData *TGXSafePatch(NSData *input) {
+	@try {
+		return TGXPatchIncoming(input);
+	} @catch (NSException *e) {
+		return nil;
+	}
+}
+
+typedef id (^TGXParser)(NSData *);
+static TGXParser TGXWrapParser(TGXParser original) {
+	return ^id(NSData *inputData) {
+		NSData *patched = TGXSafePatch(inputData);
+		return original(patched ? patched : inputData);
+	};
+}
+
 %hook MTRequest
 %property (nonatomic, strong) NSData *fakeData;
 %property (nonatomic, strong) NSNumber *functionID;
@@ -60,12 +76,8 @@ NSData *TGXPatchIncoming(NSData *input) {
 		default: break;
 	}
 
-	if (!responseParser) { %orig; return; }
-	id (^hooked)(NSData *) = ^id(NSData *inputData) {
-		NSData *patched = nil;
-		@try { patched = TGXPatchIncoming(inputData); } @catch (NSException *e) { patched = nil; }
-		return responseParser(patched ?: inputData);
-	};
+	id (^parser)(NSData *) = responseParser;
+	id (^hooked)(NSData *) = parser ? TGXWrapParser(parser) : nil;
 	%orig(payload, metadata, shortMetadata, hooked);
 }
 %end
@@ -94,8 +106,7 @@ NSData *TGXPatchIncoming(NSData *input) {
 // Push updates (new messages, deletions, edits) arrive here already gunzipped.
 %hook TGXSerialization
 - (id)parseMessage:(NSData *)data {
-	NSData *patched = nil;
-	@try { patched = TGXPatchIncoming(data); } @catch (NSException *e) { patched = nil; }
+	NSData *patched = TGXSafePatch(data);
 	return %orig(patched ?: data);
 }
 %end
