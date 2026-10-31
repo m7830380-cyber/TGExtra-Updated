@@ -219,11 +219,11 @@ void TGXMarkDeleted(int64_t channelId, int32_t messageId) {
 %ctor {
 	loadDeleted();
 	gLiveNodes = [NSHashTable weakObjectsHashTable];
-	gIdRegex = [NSRegularExpression regularExpressionWithPattern:@"id: (\\d+):(-?\\d+):(\\d+)_(-?\\d+)" options:0 error:nil];
+	gIdRegex = [NSRegularExpression regularExpressionWithPattern:@"id: (\\d+):(?:Id\\(rawValue: )?(-?\\d+)\\)?:(\\d+)_(-?\\d+)" options:0 error:nil];
 	dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.2 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
 		gItemViewClass = objc_getClass("ChatMessageItemView.ChatMessageItemView");
 		if (!gItemViewClass) gItemViewClass = NSClassFromString(@"_TtC19ChatMessageItemView19ChatMessageItemView");
-		TGXLog(@"TGExtra 1.5.1 itemClass=%@", gItemViewClass);
+		TGXLog(@"TGExtra 1.5.2 itemClass=%@", gItemViewClass);
 		if (!gItemViewClass) return;
 		Ivar iv = class_getInstanceVariable(gItemViewClass, "item");
 		if (iv) gItemOffset = ivar_getOffset(iv);
