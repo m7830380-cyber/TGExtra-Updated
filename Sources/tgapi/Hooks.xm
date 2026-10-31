@@ -76,8 +76,8 @@ static TGXParser TGXWrapParser(TGXParser original) {
 		default: break;
 	}
 
-	id (^parser)(NSData *) = responseParser;
-	id (^hooked)(NSData *) = parser ? TGXWrapParser(parser) : nil;
+	TGXParser hooked = responseParser;
+	if (responseParser != NULL) hooked = TGXWrapParser(responseParser);
 	%orig(payload, metadata, shortMetadata, hooked);
 }
 %end
