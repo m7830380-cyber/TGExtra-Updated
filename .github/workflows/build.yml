@@ -52,23 +52,26 @@ jobs:
           sdks-src: 'waruhachi/sdks'
           sdks-branch: 'main'
 
-      - name: Build fastPathSign (CoreTrust bypass signer)
+      - name: Build ct_bypass (ChOma, CoreTrust bypass w/ custom TeamID)
         run: |
-          git clone -q https://github.com/opa334/TrollStore /tmp/ts
-          cd /tmp/ts && git submodule update --init --depth 1 ChOma
-          cd Exploits/fastPathSign
+          git clone -q --depth 1 https://github.com/opa334/ChOma /tmp/choma
+          cd /tmp/choma
           brew list openssl@3 >/dev/null 2>&1 || brew install openssl@3
           export PKG_CONFIG_PATH="$(brew --prefix openssl@3)/lib/pkgconfig"
-          make
-          cp fastPathSign /usr/local/bin/ 2>/dev/null || sudo cp fastPathSign /usr/local/bin/
+          export CFLAGS="-I$(brew --prefix openssl@3)/include" LDFLAGS="-L$(brew --prefix openssl@3)/lib"
+          make -j4 || make
+          B=$(find /tmp/choma/output -type f -name ct_bypass | head -1)
+          echo "ct_bypass at $B"; sudo cp "$B" /usr/local/bin/ct_bypass
 
       - name: Stage embedded Python 3.13
         run: |
           bash tools/stage_python.sh python_runtime
+          # Telegram App Store TeamID: dyld rejects non-platform libs with a different TeamID
+          TEAM=C67CF9S4VU
           find python_runtime \( -name '*.so' -o -path '*Python.framework/Python' \) -type f | while read f; do
-            fastPathSign "$f" >/dev/null || { echo "sign failed $f"; exit 1; }
+            ct_bypass -i "$f" -r -t $TEAM >/dev/null || { echo "sign failed $f"; exit 1; }
           done
-          echo "fastPathSigned $(find python_runtime -name '*.so' | wc -l) extensions + Python"
+          echo "signed with TeamID $TEAM"
 
       - name: Build Package
         run: make clean package FINALPACKAGE=1 STRIP=0 ${{ matrix.scheme_arg }}
