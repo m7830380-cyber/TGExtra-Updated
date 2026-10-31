@@ -61,10 +61,13 @@ jobs:
           git checkout -q 964023ddac2286ef8e843f90df64d44ac6a673df
           brew list openssl@3 >/dev/null 2>&1 || brew install openssl@3
           export PKG_CONFIG_PATH="$(brew --prefix openssl@3)/lib/pkgconfig"
+          # This commit has no include/ dir; headers are src/*.h referenced as
+          # <choma/X.h>. Build an include root whose choma/ maps to src/.
+          mkdir -p /tmp/chi && ln -sfn /tmp/choma/src /tmp/chi/choma
           # ChOma's standalone Makefile link to libchoma.{a,dylib} breaks with custom
           # openssl flags; instead compile ct_bypass directly from sources (same approach
           # as TrollStore's fastPathSign Makefile) so crypto symbols resolve via pkg-config.
-          clang -O2 -Iinclude \
+          clang -O2 -Iinclude -I/tmp/chi \
             $(pkg-config --cflags libcrypto) \
             tests/ct_bypass/main.c src/*.c \
             $(pkg-config --libs libcrypto) \
